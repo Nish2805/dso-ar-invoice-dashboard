@@ -1,0 +1,7 @@
+# Real business data — never commit, regardless of location
+raw data/
+backend/data/
+
+# OS
+.DS_Store
+Thumbs.db

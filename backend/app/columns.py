@@ -1,0 +1,46 @@
+"""
+Single source of truth for raw CSV column names and file names.
+
+Confirmed against the real data pulled from ADLS (stdafzdatalakedev /
+landing / Temporary/DSO_Fusion) — an Oracle Fusion Cloud ERP export.
+All join keys below were verified against the real data (100% match rates).
+"""
+
+# --- File names (exact, under settings.local_data_dir) ---
+FACT_FILE = "FIN_AR_INVOICE_LINE_F.csv"
+CUSTOMER_FILE = "FIN_CUSTOMER_D.csv"
+BUSINESS_UNIT_FILE = "FIN_BUSINESSUNIT_D.csv"
+RECORD_TYPE_FILE = "FIN_RECORDTYPE_D.csv"
+INVOICE_SOURCE_FILE = "FIN_AR_INVOICE_SOURCE_D.csv"
+
+# --- Fact table: FIN_AR_INVOICE_LINE_F.csv ---
+FACT_CUSTOMER_ID = "RACUSTOMERTRXBILLTOCUSTOMERID"
+FACT_ORG_ID = "RACUSTOMERTRXORGID"
+FACT_TRX_TYPE_ID = "RACUSTOMERTRXCUSTTRXTYPESEQID"
+FACT_SOURCE_ID = "RACUSTOMERTRXBATCHSOURCESEQID"
+INVOICE_NO = "RACUSTOMERTRXTRXNUMBER"
+TRX_DATE = "RACUSTOMERTRXTRXDATE"
+TRX_CLASS = "RACUSTOMERTRXTRXCLASS"  # INV / CM / ONACC
+LINE_TYPE = "RACUSTOMERTRXLINELINETYPE"  # LINE / TAX
+INVOICE_AMOUNT = "RACUSTOMERTRXLINEREVENUEAMOUNT"
+LINE_NO = "RACUSTOMERTRXLINECUSTOMERTRXLINEID"
+
+# --- Customer dimension: FIN_CUSTOMER_D.csv ---
+CUSTOMER_ID = "CUSTACCOUNTID"  # join key, matches FACT_CUSTOMER_ID
+CUSTOMER_ACCOUNT_NO = "ACCOUNTNUMBER"
+CUSTOMER_NAME = "PARTYNAME"
+
+# --- Business unit dimension: FIN_BUSINESSUNIT_D.csv ---
+BUSINESS_UNIT_ID = "BUSINESSUNITID"  # join key, matches FACT_ORG_ID
+ENTITY_NAME = "BUSINESSUNITNAME"
+
+# --- Record type dimension: FIN_RECORDTYPE_D.csv ---
+RECORD_TYPE_ID = "CUSTTRXTYPESEQID"  # join key, matches FACT_TRX_TYPE_ID
+INVOICE_TYPE = "TRANSACTIONTYPENAME"
+
+# --- Invoice source dimension: FIN_AR_INVOICE_SOURCE_D.csv ---
+INVOICE_SOURCE_ID = "RABATCHSOURCEBATCHSOURCESEQID"  # join key, matches FACT_SOURCE_ID
+INVOICE_SOURCE = "RABATCHSOURCENAME"
+
+# Date column used to derive Year / Month filters and the monthly trend chart.
+TREND_DATE_COLUMN = TRX_DATE
