@@ -1,0 +1,47 @@
+id: ar-dashboard-app
+name: ar-dashboard-app
+version: 1.0.0
+services:
+  auth:
+    enabled: true
+    fabric:
+      enabled: true
+      externalEntraExchange: true
+    password:
+      enabled: false
+    allowedRedirectUris:
+      - http://localhost:5173
+      - http://localhost:5174
+      - http://127.0.0.1:5174
+      - https://vivid-grass-2a48bd96c8-uaenorth.webapp.fabricapps.net
+  data:
+    enabled: false
+    path: packages/data
+    buildCommand: npm run build
+  staticHosting:
+    enabled: true
+    path: packages/frontend
+    folder: dist
+    buildCommand: npm run build:fabric
+    indexDocument: index.html
+    assetAccess: protected
+    embedded:
+      only: false
+  storage:
+    enabled: false
+  functions:
+    enabled: true
+    path: packages/functions
+    buildCommand: npm run build
+    auth:
+      type: application
+connectors:
+  - name: lh_diez_crm
+    type: fabric-sqlanalytics
+    config:
+      workspaceId: eb803f49-f329-4c4a-82f7-afed15eb901a
+      itemId: 6c56aa55-2b5a-4dd7-bbd5-9ba5a61dd1cd
+    auth:
+      type: application
+    operations:
+      - name: read

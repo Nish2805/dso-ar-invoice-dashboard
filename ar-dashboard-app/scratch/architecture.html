@@ -1,0 +1,398 @@
+<title>AR Dashboard Architecture</title>
+<style>
+  /* Layout: single-column explainer — hero thesis, then a boxes-and-arrows
+     system diagram, then two data-path lanes, then a deploy/ownership strip. */
+  :root{
+    --bg:#f7f8f6; --bg-raised:#ffffff; --border:#dfe1db;
+    --text:#0b0b0b; --text-soft:#52514e; --muted:#8a8a83;
+    --navy:#0c2b3a; --teal:#12707a; --blue:#2a78d6; --violet:#4a3aa7;
+    --blue-soft:rgba(42,120,214,.1); --violet-soft:rgba(74,58,167,.1);
+    --good:#0a6b2e; --warn:#b4790a; --crit:#b4312f;
+    --font-display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1210; --bg-raised:#161c19; --border:#2a322d;
+      --text:#f2f3f0; --text-soft:#b7bab2; --muted:#7d8179;
+      --blue-soft:rgba(90,160,240,.14); --violet-soft:rgba(140,120,220,.14);
+      --good:#3fcc7a; --warn:#e3a53a; --crit:#f0756f;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1210; --bg-raised:#161c19; --border:#2a322d;
+    --text:#f2f3f0; --text-soft:#b7bab2; --muted:#7d8179;
+    --blue-soft:rgba(90,160,240,.14); --violet-soft:rgba(140,120,220,.14);
+    --good:#3fcc7a; --warn:#e3a53a; --crit:#f0756f;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);
+       padding:40px 16px 56px;}
+  .wrap{max-width:1120px;margin:0 auto;}
+
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--teal);margin:0 0 10px;}
+  h1{font-family:var(--font-display);font-weight:600;font-size:clamp(26px,5vw,38px);
+     line-height:1.1;letter-spacing:-.01em;margin:0 0 14px;text-wrap:balance;}
+  .thesis{font-size:16px;line-height:1.6;color:var(--text-soft);max-width:62ch;margin:0 0 6px;}
+  .logo{display:inline-flex;align-items:baseline;gap:2px;font-family:var(--font-display);
+        font-weight:800;font-size:13px;letter-spacing:.12em;color:var(--navy);margin-bottom:18px;}
+  :root[data-theme="dark"] .logo, @media (prefers-color-scheme: dark){.logo{color:#eef2f1}}
+  .logo b{color:var(--teal)}
+
+  section{margin-top:44px;}
+  h2{font-family:var(--font-display);font-weight:600;font-size:19px;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{font-size:13px;color:var(--muted);margin:0 0 20px;}
+
+  /* system diagram */
+  .fig{margin:0;background:var(--bg-raised);border:1px solid var(--border);
+       border-radius:16px;padding:16px;}
+  .fig svg{display:block;width:100%;height:auto;color:var(--text-soft);}
+  .fig figcaption{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;}
+  .dg-boundary{fill:none;stroke:var(--border);stroke-width:1.5;stroke-dasharray:6 5;}
+  .dg-tile{fill:var(--bg);stroke:var(--border);stroke-width:1.2;}
+  .dg-tile-blue{fill:var(--blue-soft);stroke:var(--blue);}
+  .dg-tile-violet{fill:var(--violet-soft);stroke:var(--violet);}
+  .dg-chip{fill:var(--bg-raised);stroke:var(--border);stroke-width:1;}
+  .dg-eyebrow{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;fill:var(--teal);}
+  .dg-title{font-family:var(--font-display);font-weight:600;font-size:12.5px;fill:var(--text);}
+  .dg-sub{font-family:var(--font-body);font-size:10px;fill:var(--text-soft);}
+  .dg-chip-title{font-family:var(--font-mono);font-size:9px;fill:var(--text);}
+  .dg-chip-sub{font-family:var(--font-body);font-size:8px;fill:var(--muted);}
+  .dg-note{font-family:var(--font-body);font-size:9.5px;fill:var(--muted);}
+  .dg-arrow{stroke:var(--text-soft);stroke-width:1.4;fill:none;}
+  .dg-arrow-label{font-family:var(--font-mono);font-size:9.5px;fill:var(--text-soft);}
+  .dg-arrowhead{fill:var(--text-soft);}
+  .dg-row-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.07em;fill:var(--muted);}
+  .dg-badge-id{fill:var(--blue);}
+  .dg-badge-sec{fill:#c23b36;}
+  .dg-badge-app{fill:var(--blue);}
+  .dg-badge-neu{fill:var(--muted);}
+  .dg-badge-fn{fill:var(--violet);}
+  .dg-badge-data{fill:var(--teal);}
+  .dg-badge-rel{fill:#d98a2b;}
+  .dg-badge-ok{fill:var(--good);}
+  .dg-badge-txt{font-family:var(--font-mono);font-size:8.5px;font-weight:700;fill:#fff;}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:12px;
+          font-size:11px;color:var(--text-soft);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+  /* two-lane data paths */
+  .lanes{display:grid;grid-template-columns:1fr;gap:16px;}
+  @media(min-width:640px){.lanes{grid-template-columns:1fr 1fr;}}
+  .lane{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:18px;min-width:0;}
+  .lane .tag{display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;
+             text-transform:uppercase;padding:3px 8px;border-radius:999px;margin-bottom:10px;}
+  .lane.a .tag{background:var(--blue-soft);color:var(--blue);}
+  .lane.b .tag{background:var(--violet-soft);color:var(--violet);}
+  .lane h3{font-family:var(--font-display);font-size:15px;margin:0 0 8px;font-weight:600;}
+  .lane p{font-size:13px;line-height:1.6;color:var(--text-soft);margin:0 0 10px;}
+  .lane ul{margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--text-soft);}
+  .lane code{font-family:var(--font-mono);font-size:12px;background:var(--bg);
+             border:1px solid var(--border);border-radius:4px;padding:1px 5px;}
+
+  .note{display:flex;gap:10px;background:var(--bg-raised);border:1px solid var(--border);
+        border-left:3px solid var(--warn);border-radius:10px;padding:14px 16px;margin-top:16px;}
+  .note .ico{font-family:var(--font-mono);font-size:12px;color:var(--warn);flex:none;}
+  .note p{font-size:13px;line-height:1.6;color:var(--text-soft);margin:0;}
+
+  .steps{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);
+         border-radius:14px;overflow:hidden;background:var(--bg-raised);}
+  .step{display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);align-items:baseline;}
+  .step:last-child{border-bottom:none;}
+  .step .num{font-family:var(--font-mono);font-size:12px;color:var(--teal);flex:none;width:18px;}
+  .step .cmd{font-family:var(--font-mono);font-size:12.5px;color:var(--text);}
+  .step .desc{font-size:12.5px;color:var(--muted);margin-left:auto;text-align:right;}
+
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);
+         font-size:11.5px;color:var(--muted);text-align:center;}
+
+  @media(max-width:480px){
+    .step{flex-direction:column;gap:3px;}
+    .step .desc{margin-left:0;text-align:left;}
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <div class="logo">D<b>|</b>EZ</div>
+  <p class="eyebrow">Technical architecture</p>
+  <h1>AR Invoice Dashboard, rebuilt native to Microsoft Fabric</h1>
+  <p class="thesis">
+    The dashboard now runs entirely inside Fabric — a Fabric App for the frontend
+    and Fabric User Data Functions for the backend — querying the Lakehouse's
+    SQL analytics endpoint directly. No App Service, no Static Web Apps,
+    no separate server to patch or pay for.
+  </p>
+
+  <section>
+    <h2>System diagram</h2>
+    <p class="sub">Every request and the deploy path, in one picture — zones, identities, and what each arrow actually carries.</p>
+    <figure class="fig">
+      <svg viewBox="0 0 1300 920" role="img"
+           aria-label="Browser signs in via Microsoft Entra ID and calls the Fabric App over HTTPS. The Fabric App queries Rayfin Functions via invoke() and the Lakehouse Connector via GraphQL, inside the DIEZ Under Development Fabric workspace. Rayfin Functions run parameterized SQL against the LH_DIEZ_CRM Lakehouse's five tables, using a SQL token issued to the App Identity; the Connector runs capped dropdown-only lookups against the same Lakehouse. Below, a release path shows a local machine building the code and deploying both the Fabric App and Rayfin Functions together with one npx rayfin up command, gated to the item's actual owner.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,5 0,10" class="dg-arrowhead" />
+          </marker>
+        </defs>
+
+        <!-- External identity -->
+        <text x="20" y="34" class="dg-eyebrow">EXTERNAL IDENTITY</text>
+        <rect x="20" y="44" width="200" height="110" rx="10" class="dg-boundary" />
+        <rect x="40" y="64" width="160" height="72" rx="8" class="dg-tile" />
+        <rect x="54" y="78" width="26" height="26" rx="6" class="dg-badge-id" />
+        <text x="67" y="95" text-anchor="middle" class="dg-badge-txt">ID</text>
+        <text x="90" y="92" class="dg-title">Entra ID</text>
+        <text x="90" y="108" class="dg-sub">SSO + SQL token</text>
+
+        <!-- Users -->
+        <text x="20" y="214" class="dg-eyebrow">USERS</text>
+        <rect x="20" y="224" width="200" height="80" rx="8" class="dg-tile" />
+        <rect x="34" y="238" width="26" height="26" rx="6" class="dg-badge-neu" />
+        <text x="47" y="255" text-anchor="middle" class="dg-badge-txt">WEB</text>
+        <text x="70" y="252" class="dg-title">Browser</text>
+        <text x="70" y="268" class="dg-sub">React app</text>
+
+        <!-- Main Fabric workspace boundary -->
+        <rect x="260" y="20" width="1020" height="600" rx="14" class="dg-boundary" />
+        <text x="282" y="44" class="dg-eyebrow">MICROSOFT FABRIC · WORKSPACE: DIEZ — UNDER DEVELOPMENT</text>
+
+        <!-- Security row -->
+        <text x="300" y="58" class="dg-row-label">SECURITY</text>
+        <rect x="300" y="66" width="260" height="70" rx="8" class="dg-tile" />
+        <rect x="314" y="80" width="26" height="26" rx="6" class="dg-badge-sec" />
+        <text x="327" y="97" text-anchor="middle" class="dg-badge-txt">KEY</text>
+        <text x="350" y="94" class="dg-title">App Identity</text>
+        <text x="350" y="110" class="dg-sub">Fabric App's owner account</text>
+
+        <!-- App layer row -->
+        <text x="300" y="168" class="dg-row-label">APPLICATION LAYER</text>
+
+        <rect x="300" y="176" width="220" height="120" rx="10" class="dg-tile-blue" />
+        <rect x="314" y="190" width="26" height="26" rx="6" class="dg-badge-app" />
+        <text x="327" y="207" text-anchor="middle" class="dg-badge-txt">APP</text>
+        <text x="350" y="204" class="dg-title">Fabric App</text>
+        <text x="350" y="220" class="dg-sub">React · static hosted</text>
+        <text x="350" y="234" class="dg-sub">(Rayfin framework)</text>
+
+        <rect x="540" y="176" width="220" height="120" rx="10" class="dg-tile" />
+        <rect x="554" y="190" width="26" height="26" rx="6" class="dg-badge-neu" />
+        <text x="567" y="207" text-anchor="middle" class="dg-badge-txt">GQL</text>
+        <text x="590" y="204" class="dg-title">Connector</text>
+        <text x="590" y="220" class="dg-sub">GraphQL lookups</text>
+        <text x="590" y="234" class="dg-sub">dropdown options only</text>
+
+        <rect x="780" y="176" width="220" height="120" rx="10" class="dg-tile-violet" />
+        <rect x="794" y="190" width="26" height="26" rx="6" class="dg-badge-fn" />
+        <text x="807" y="207" text-anchor="middle" class="dg-badge-txt">&#402;x</text>
+        <text x="830" y="204" class="dg-title">Functions</text>
+        <text x="830" y="220" class="dg-sub">TypeScript · SQL</text>
+        <text x="830" y="234" class="dg-sub">deployed with the app</text>
+
+        <rect x="1020" y="176" width="220" height="120" rx="10" class="dg-tile" />
+        <rect x="1034" y="190" width="26" height="26" rx="6" class="dg-badge-id" />
+        <text x="1047" y="207" text-anchor="middle" class="dg-badge-txt">SSO</text>
+        <text x="1070" y="204" class="dg-title">SSO Session</text>
+        <text x="1070" y="220" class="dg-sub">Fabric-authenticated</text>
+        <text x="1070" y="234" class="dg-sub">browser session</text>
+
+        <!-- Data layer -->
+        <text x="300" y="328" class="dg-row-label">DATA LAYER</text>
+        <rect x="300" y="336" width="920" height="224" rx="12" class="dg-tile" />
+        <text x="320" y="368" class="dg-title">LH_DIEZ_CRM — Lakehouse</text>
+        <text x="320" y="384" class="dg-sub">SQL analytics endpoint, schema EDW</text>
+
+        <rect x="320" y="400" width="166" height="66" rx="6" class="dg-chip" />
+        <rect x="330" y="410" width="22" height="22" rx="5" class="dg-badge-data" />
+        <text x="341" y="425" text-anchor="middle" class="dg-badge-txt" style="font-size:7px">FACT</text>
+        <text x="360" y="422" class="dg-chip-title">INVOICE_LINE_F</text>
+        <text x="360" y="434" class="dg-chip-sub">fact · ~1.3M rows</text>
+
+        <rect x="498" y="400" width="166" height="66" rx="6" class="dg-chip" />
+        <rect x="508" y="410" width="22" height="22" rx="5" class="dg-badge-data" />
+        <text x="519" y="425" text-anchor="middle" class="dg-badge-txt" style="font-size:7px">DIM</text>
+        <text x="538" y="422" class="dg-chip-title">CUSTOMER_D</text>
+        <text x="538" y="434" class="dg-chip-sub">dimension</text>
+
+        <rect x="676" y="400" width="166" height="66" rx="6" class="dg-chip" />
+        <rect x="686" y="410" width="22" height="22" rx="5" class="dg-badge-data" />
+        <text x="697" y="425" text-anchor="middle" class="dg-badge-txt" style="font-size:7px">DIM</text>
+        <text x="716" y="422" class="dg-chip-title">BUSINESSUNIT_D</text>
+        <text x="716" y="434" class="dg-chip-sub">dimension</text>
+
+        <rect x="854" y="400" width="166" height="66" rx="6" class="dg-chip" />
+        <rect x="864" y="410" width="22" height="22" rx="5" class="dg-badge-data" />
+        <text x="875" y="425" text-anchor="middle" class="dg-badge-txt" style="font-size:7px">DIM</text>
+        <text x="894" y="422" class="dg-chip-title">RECORDTYPE_D</text>
+        <text x="894" y="434" class="dg-chip-sub">dimension</text>
+
+        <rect x="1032" y="400" width="166" height="66" rx="6" class="dg-chip" />
+        <rect x="1042" y="410" width="22" height="22" rx="5" class="dg-badge-data" />
+        <text x="1053" y="425" text-anchor="middle" class="dg-badge-txt" style="font-size:7px">DIM</text>
+        <text x="1072" y="422" class="dg-chip-title">INVOICE_SOURCE_D</text>
+        <text x="1072" y="434" class="dg-chip-sub">dimension</text>
+
+        <text x="760" y="490" text-anchor="middle" class="dg-note">
+          joined via OrgID · CustTrxTypeSeqID · BillToCustomerID · BatchSourceSeqID
+        </text>
+        <text x="760" y="512" text-anchor="middle" class="dg-note">
+          same live data Power BI or SSMS would see — nothing cached, nothing pre-aggregated
+        </text>
+
+        <!-- Release path -->
+        <rect x="20" y="660" width="1260" height="220" rx="14" class="dg-boundary" />
+        <text x="42" y="684" class="dg-eyebrow">RELEASE PATH</text>
+
+        <rect x="60" y="700" width="280" height="100" rx="10" class="dg-tile" />
+        <rect x="74" y="714" width="26" height="26" rx="6" class="dg-badge-rel" />
+        <text x="87" y="731" text-anchor="middle" class="dg-badge-txt">PC</text>
+        <text x="110" y="728" class="dg-title">Local machine</text>
+        <text x="110" y="744" class="dg-sub">developer's own terminal</text>
+
+        <rect x="360" y="700" width="280" height="100" rx="10" class="dg-tile" />
+        <rect x="374" y="714" width="26" height="26" rx="6" class="dg-badge-rel" />
+        <text x="387" y="731" text-anchor="middle" class="dg-badge-txt">BLD</text>
+        <text x="410" y="728" class="dg-title">Build</text>
+        <text x="410" y="744" class="dg-sub">tsc --build · npm build</text>
+
+        <rect x="660" y="700" width="280" height="100" rx="10" class="dg-tile" />
+        <rect x="674" y="714" width="26" height="26" rx="6" class="dg-badge-rel" />
+        <text x="687" y="731" text-anchor="middle" class="dg-badge-txt">UP</text>
+        <text x="710" y="728" class="dg-title">Deploy</text>
+        <text x="710" y="744" class="dg-sub">npx rayfin up</text>
+
+        <rect x="960" y="700" width="280" height="100" rx="10" class="dg-tile" />
+        <rect x="974" y="714" width="26" height="26" rx="6" class="dg-badge-ok" />
+        <text x="987" y="731" text-anchor="middle" class="dg-badge-txt">OK</text>
+        <text x="1010" y="728" class="dg-title">Live</text>
+        <text x="1010" y="744" class="dg-sub">App + Functions updated</text>
+        <text x="1010" y="758" class="dg-sub">together, same moment</text>
+
+        <text x="660" y="840" text-anchor="middle" class="dg-note">
+          deploying functions that touch the Lakehouse requires signing in as the Fabric item's actual owner — anyone else is blocked
+        </text>
+
+        <!-- Arrows -->
+        <!-- External Identity -> Fabric App (sign-in) -->
+        <line x1="200" y1="100" x2="298" y2="236" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="250" y="156" text-anchor="middle" class="dg-arrow-label">sign-in</text>
+
+        <!-- External Identity -> App Identity -->
+        <line x1="200" y1="100" x2="298" y2="101" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="250" y="90" text-anchor="middle" class="dg-arrow-label">app identity</text>
+
+        <!-- App Identity -> Rayfin Functions (SQL token), elbow -->
+        <polyline points="430,136 430,156 860,156 860,176" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="660" y="150" text-anchor="middle" class="dg-arrow-label">SQL token</text>
+
+        <!-- Users -> Fabric App -->
+        <line x1="220" y1="264" x2="298" y2="210" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="255" y="235" text-anchor="middle" class="dg-arrow-label">HTTPS</text>
+
+        <!-- Fabric App -> Connector -->
+        <line x1="520" y1="236" x2="538" y2="236" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="529" y="224" text-anchor="middle" class="dg-arrow-label">GraphQL</text>
+
+        <!-- Fabric App -> Rayfin Functions (invoke), elbow below the row -->
+        <polyline points="410,296 410,316 860,316 860,296" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="650" y="310" text-anchor="middle" class="dg-arrow-label">invoke()</text>
+
+        <!-- Rayfin Functions -> Lakehouse -->
+        <line x1="920" y1="296" x2="920" y2="334" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="926" y="316" class="dg-arrow-label">parameterized SQL</text>
+
+        <!-- Connector -> Lakehouse -->
+        <line x1="650" y1="296" x2="650" y2="334" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="656" y="316" class="dg-arrow-label">dropdown lookups</text>
+
+        <!-- Release path -> Fabric App (deploy) -->
+        <polyline points="800,700 800,672 240,672 240,210 298,210" class="dg-arrow" marker-end="url(#arrow)" />
+        <text x="250" y="450" text-anchor="start" class="dg-arrow-label" transform="rotate(-90 250 450)">build + deploy both together</text>
+      </svg>
+      <figcaption>
+        Browser signs in via Entra ID and talks to the Fabric App; the App calls
+        Rayfin Functions (SQL) and the Connector (GraphQL), both reading the same
+        Lakehouse. One command, run by the item's owner, deploys the App and
+        Functions together.
+      </figcaption>
+      <div class="legend">
+        <span><i style="background:var(--blue)"></i>Identity / auth</span>
+        <span><i style="background:var(--violet)"></i>Functions (SQL)</span>
+        <span><i style="background:var(--muted)"></i>Connector (GraphQL)</span>
+        <span><i style="background:var(--teal)"></i>Lakehouse data</span>
+        <span><i style="background:#d98a2b"></i>Release path</span>
+      </div>
+    </figure>
+  </section>
+  <section>
+    <h2>Two data-access paths</h2>
+    <p class="sub">Picked per query, not per page — based on what the aggregation actually needs.</p>
+    <div class="lanes">
+      <div class="lane a">
+        <span class="tag">Lakehouse connector</span>
+        <h3>Small, low-cardinality lookups</h3>
+        <p>Native GraphQL connector straight to the Lakehouse. Used only for
+        filter dropdown options — entities, invoice types, transaction classes.</p>
+        <ul>
+          <li>Zero code — declarative entity mapping</li>
+          <li>Hard cap: ~100 groups per aggregated query</li>
+          <li>Fine for dimension tables, wrong for the fact table</li>
+        </ul>
+      </div>
+      <div class="lane b">
+        <span class="tag">SQL functions</span>
+        <h3>Everything that aggregates real volume</h3>
+        <p>Parameterized T-SQL run from a Rayfin User Data Function, against
+        the ~1.3M-row <code>FIN_AR_INVOICE_LINE_F</code> fact table.</p>
+        <ul>
+          <li>KPIs, trends, top customers, concentration</li>
+          <li>Economics, exceptions, insights, the full invoice table</li>
+          <li>No row cap — the database does the aggregating</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note">
+      <span class="ico">△</span>
+      <p><strong>Why two paths, not one:</strong> the connector's aggregation
+      silently caps grouped results around 100 rows — undocumented, and only
+      visible once invoice counts came back wrong at real scale. Anything
+      touching the full fact table now goes through SQL functions instead.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Filtering</h2>
+    <p class="sub">One shared filter state, pushed into every query as SQL parameters.</p>
+    <div class="lane a" style="max-width:none">
+      <p style="margin-bottom:0">Entity, Invoice Type, Transaction Class, Year and
+      Month live in one React state object at the top of the app. Every KPI,
+      chart and the invoice table receives it and turns it into a parameterized
+      <code>WHERE</code> clause server-side. Three charts (Invoice Type,
+      Top Customers, Invoice Source) and both trend charts also write back into
+      that same state on click — so clicking a bar filters everything else on
+      the page, and clicking it again clears it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Deploy</h2>
+    <p class="sub">One command builds and ships both the app and the functions together.</p>
+    <div class="steps">
+      <div class="step"><span class="num">1</span><span class="cmd">npx rayfin up</span><span class="desc">builds frontend + functions, deploys both</span></div>
+      <div class="step"><span class="num">2</span><span class="cmd">app identity</span><span class="desc">functions run as the Fabric App's own owner — no manual tokens</span></div>
+      <div class="step"><span class="num">3</span><span class="cmd">item owner only</span><span class="desc">SQL-connected functions can only be deployed by the app's actual owner</span></div>
+    </div>
+  </section>
+
+  <footer>AR Invoice Dashboard · Dubai Silicon Oasis · Fabric-native architecture</footer>
+</div>

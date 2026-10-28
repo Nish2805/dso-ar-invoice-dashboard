@@ -1,0 +1,251 @@
+<title>Lakehouse to Dashboard</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: dark title band, then a left-to-right query-path row feeding a
+     big Lakehouse panel (capped-connector vs. correct-functions comparison),
+     a stat strip, a 4-step deploy row, and a dark before/after footer. */
+  :root{
+    --bg:#f4f5f2; --card:#ffffff; --border:#dfe1db;
+    --text:#14181a; --text-soft:#4c5457; --muted:#868d8a;
+    --navy:#0c2b3a; --navy-deep:#081c26; --teal:#12707a; --teal-soft:#e4f0ef;
+    --good:#0f8a5c; --bad:#c23b36; --bad-soft:#fbeae9; --good-soft:#e7f5ee;
+    --font-display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b0f0e; --card:#161c19; --border:#2a322d;
+      --text:#f2f3f0; --text-soft:#b7bab2; --muted:#7d8179;
+      --teal-soft:rgba(18,112,122,.22); --good-soft:rgba(15,138,92,.16); --bad-soft:rgba(194,59,54,.16);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b0f0e; --card:#161c19; --border:#2a322d;
+    --text:#f2f3f0; --text-soft:#b7bab2; --muted:#7d8179;
+    --teal-soft:rgba(18,112,122,.22); --good-soft:rgba(15,138,92,.16); --bad-soft:rgba(194,59,54,.16);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);}
+  .side{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+
+  .band{background:var(--navy);padding-block:36px;}
+  .band .inner{max-width:1040px;margin:0 auto;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+           color:#8fd3c9;text-align:right;margin:0 0 18px;}
+  h1{font-family:var(--font-display);font-weight:600;font-size:clamp(24px,4.4vw,34px);
+     color:#fff;margin:0 0 12px;letter-spacing:-.01em;text-wrap:balance;}
+  .rule{width:64px;height:3px;background:var(--teal);margin:0 0 14px;border-radius:2px;}
+  .thesis{font-size:14.5px;line-height:1.6;color:#c7d2d0;max-width:60ch;margin:0;}
+
+  main{max-width:1040px;margin:0 auto;padding-block:40px;}
+  section{margin-top:40px;}
+  h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0 0 4px;}
+  .sub{font-size:13px;color:var(--muted);margin:0 0 22px;}
+
+  /* query path */
+  .qpath{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;}
+  .qcol{display:flex;flex-direction:column;gap:18px;justify-content:center;flex:0 0 220px;}
+  .qarrows{flex:0 0 120px;display:flex;flex-direction:column;justify-content:center;
+           align-items:center;gap:6px;padding:0 6px;min-width:100px;}
+  .qarrows .lbl{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);text-align:center;}
+  .qarrows svg{color:var(--text-soft);}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .card .ic{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
+            border-radius:9px;background:var(--teal-soft);color:var(--teal);margin-bottom:10px;}
+  .card h3{font-family:var(--font-display);font-size:14px;font-weight:600;margin:0 0 3px;}
+  .card p{font-size:11.5px;color:var(--text-soft);margin:0;line-height:1.5;}
+
+  .lake{flex:1 1 320px;background:var(--navy);border-radius:14px;padding:22px;color:#fff;min-width:0;}
+  .lake h3{font-family:var(--font-display);font-size:16px;font-weight:600;margin:0 0 3px;}
+  .lake .lsub{font-size:11.5px;color:#9fb3b0;margin:0 0 16px;}
+  .lrow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.12);}
+  .lrow:first-of-type{border-top:none;}
+  .mark{flex:none;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;
+        justify-content:center;font-size:11px;font-weight:700;margin-top:1px;}
+  .mark.bad{background:var(--bad);color:#fff;}
+  .mark.good{background:var(--good);color:#fff;}
+  .lrow b{font-size:12.5px;display:block;}
+  .lrow span{font-size:11.5px;color:#b9c6c4;}
+  .lstat{margin-top:16px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.2);
+         font-family:var(--font-mono);font-size:11.5px;color:#8fd3c9;}
+
+  /* stat strip */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .stat b{display:block;font-family:var(--font-display);font-size:16px;margin-bottom:3px;}
+  .stat span{font-size:11.5px;color:var(--muted);}
+
+  /* deploy path */
+  .dsteps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .dstep{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;}
+  .dstep .n{font-family:var(--font-mono);font-size:10.5px;color:var(--teal);margin-bottom:8px;}
+  .dstep h3{font-family:var(--font-display);font-size:13.5px;font-weight:600;margin:0 0 3px;}
+  .dstep p{font-size:11px;color:var(--text-soft);margin:0;line-height:1.5;}
+
+  /* why it matters */
+  .why{background:var(--navy-deep);border-radius:16px;padding:26px 24px;margin-top:40px;color:#fff;}
+  .why .eyebrow{text-align:left;color:#8fd3c9;margin-bottom:16px;}
+  .compare{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  .pill{flex:1 1 260px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);
+        border-radius:12px;padding:16px;min-width:0;}
+  .pill .tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
+             font-size:10.5px;letter-spacing:.04em;margin-bottom:10px;}
+  .pill.bad .tag{color:#ff9d97;}
+  .pill.good .tag{color:#7be0b4;}
+  .pill .q{font-family:var(--font-mono);font-size:12px;color:#c7d2d0;margin-bottom:8px;}
+  .pill .num{font-family:var(--font-display);font-size:22px;font-weight:600;}
+  .pill.bad .num{color:#ff9d97;}
+  .pill.good .num{color:#7be0b4;}
+  .pill .note{font-size:11px;color:#9fb3b0;margin-top:4px;}
+  .carrow{flex:none;color:#8fd3c9;}
+
+  footer{max-width:1040px;margin:0 auto;padding:24px 0 40px;font-size:11px;color:var(--muted);text-align:center;}
+
+  @media(max-width:760px){
+    .qpath{flex-direction:column;}
+    .qcol{flex-direction:row;flex:none;}
+    .qarrows{flex-direction:row;padding:10px 0;}
+    .qarrows svg{transform:rotate(90deg);}
+    .stats{grid-template-columns:1fr;}
+    .dsteps{grid-template-columns:1fr 1fr;}
+    .compare{flex-direction:column;}
+    .carrow{transform:rotate(90deg);}
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<div class="band side">
+  <div class="inner">
+    <p class="eyebrow">AR DASHBOARD · FABRIC</p>
+    <h1>Lakehouse to Dashboard — Architecture &amp; Data Flow</h1>
+    <div class="rule"></div>
+    <p class="thesis">One connected system — the dashboard asks a question, a function runs
+    the real query against the Lakehouse, and only the answer comes back. No caching,
+    no copied data, nothing pre-calculated ahead of time.</p>
+  </div>
+</div>
+
+<main class="side">
+
+  <section>
+    <h2>Query path</h2>
+    <p class="sub">What happens the instant you load the page or touch a filter.</p>
+    <div class="qpath">
+      <div class="qcol">
+        <div class="card">
+          <div class="ic">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+          </div>
+          <h3>Dashboard</h3>
+          <p>Fabric App · React<br>filters + clicks become one shared question</p>
+        </div>
+      </div>
+      <div class="qarrows">
+        <span class="lbl">question (filters)</span>
+        <svg width="80" height="18" viewBox="0 0 80 18" fill="none"><line x1="2" y1="5" x2="70" y2="5" stroke="currentColor" stroke-width="1.5"/><polygon points="70,1 78,5 70,9" fill="currentColor"/></svg>
+        <svg width="80" height="18" viewBox="0 0 80 18" fill="none"><line x1="78" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1.5"/><polygon points="10,9 2,13 10,17" fill="currentColor"/></svg>
+        <span class="lbl">answer</span>
+      </div>
+      <div class="qcol">
+        <div class="card">
+          <div class="ic">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>
+          </div>
+          <h3>Function</h3>
+          <p>Rayfin Functions · TypeScript<br>runs the real SQL query, does the math</p>
+        </div>
+      </div>
+      <div class="qarrows">
+        <span class="lbl">SQL query</span>
+        <svg width="80" height="18" viewBox="0 0 80 18" fill="none"><line x1="2" y1="5" x2="70" y2="5" stroke="currentColor" stroke-width="1.5"/><polygon points="70,1 78,5 70,9" fill="currentColor"/></svg>
+        <svg width="80" height="18" viewBox="0 0 80 18" fill="none"><line x1="78" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1.5"/><polygon points="10,9 2,13 10,17" fill="currentColor"/></svg>
+        <span class="lbl">rows</span>
+      </div>
+      <div class="lake">
+        <h3>Lakehouse — LH_DIEZ_CRM</h3>
+        <p class="lsub">The one real source of data. Two ways to reach it:</p>
+        <div class="lrow">
+          <span class="mark bad">✕</span>
+          <div><b>Connector (GraphQL)</b><span>capped at ~100 groups — wrong once a chart needed real totals</span></div>
+        </div>
+        <div class="lrow">
+          <span class="mark good">✓</span>
+          <div><b>Functions (SQL)</b><span>no cap — the database itself does the counting, live, every time</span></div>
+        </div>
+        <div class="lstat">1.3M invoice lines queried live — nothing pre-calculated</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stats">
+      <div class="stat"><b>1.3M</b><span>invoice lines in the source table</span></div>
+      <div class="stat"><b>No caching</b><span>every click runs a fresh query</span></div>
+      <div class="stat"><b>11</b><span>live queries power the whole dashboard</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Deploy path</h2>
+    <p class="sub">How a code change actually reaches the live dashboard.</p>
+    <div class="dsteps">
+      <div class="dstep">
+        <div class="n">01</div>
+        <h3>Write code</h3>
+        <p>Changes made locally, on the developer's own machine</p>
+      </div>
+      <div class="dstep">
+        <div class="n">02</div>
+        <h3>Build</h3>
+        <p>Frontend and functions compiled and type-checked</p>
+      </div>
+      <div class="dstep">
+        <div class="n">03</div>
+        <h3>Deploy</h3>
+        <p>One command ships both pieces to Fabric together</p>
+      </div>
+      <div class="dstep">
+        <div class="n">04</div>
+        <h3>Live</h3>
+        <p>Dashboard and functions updated — same session, instantly</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="stats">
+      <div class="stat"><b>One command</b><span><code>npx rayfin up</code> deploys everything</span></div>
+      <div class="stat"><b>Owner-only</b><span>only the app's real owner can push a deploy</span></div>
+      <div class="stat"><b>Together</b><span>frontend and backend ship as one unit, never out of sync</span></div>
+    </div>
+  </section>
+
+  <div class="why">
+    <p class="eyebrow">WHY IT MATTERS</p>
+    <div class="compare">
+      <div class="pill bad">
+        <span class="tag">✕ Connector only (early build)</span>
+        <div class="q">"Invoices" KPI tile</div>
+        <div class="num">100</div>
+        <div class="note">silently capped — the real count was far higher</div>
+      </div>
+      <svg class="carrow" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="pill good">
+        <span class="tag">✓ Current (SQL functions)</span>
+        <div class="q">"Invoices" KPI tile</div>
+        <div class="num">377,580</div>
+        <div class="note">the real figure — same tile, correct mechanism</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>AR Invoice Dashboard · Dubai Silicon Oasis · Lakehouse to Dashboard</footer>

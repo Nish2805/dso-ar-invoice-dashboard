@@ -1,0 +1,182 @@
+<title>Dashboard Walkthrough</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: a plain-language explainer doc — three numbered walkthroughs,
+     each grounded in one real, concrete example from the actual dashboard. */
+  :root{
+    --bg:#f7f8f6; --card:#ffffff; --border:#dfe1db;
+    --text:#0b0b0b; --text-soft:#4a4a46; --muted:#8a8a83;
+    --navy:#0c2b3a; --teal:#12707a; --blue:#2a78d6; --violet:#4a3aa7;
+    --teal-soft:rgba(18,112,122,.09); --blue-soft:rgba(42,120,214,.09);
+    --font-display:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;
+    --font-body:'Inter',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d1210; --card:#161c19; --border:#2a322d;
+      --text:#f2f3f0; --text-soft:#c3c6c0; --muted:#7d8179;
+      --teal-soft:rgba(18,112,122,.18); --blue-soft:rgba(90,160,240,.14);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d1210; --card:#161c19; --border:#2a322d;
+    --text:#f2f3f0; --text-soft:#c3c6c0; --muted:#7d8179;
+    --teal-soft:rgba(18,112,122,.18); --blue-soft:rgba(90,160,240,.14);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);
+       padding-left:max(16px,env(safe-area-inset-left,0px));
+       padding-right:max(16px,env(safe-area-inset-right,0px));
+       padding-block:40px 60px;}
+  .wrap{max-width:720px;margin:0 auto;}
+
+  .logo{display:inline-flex;align-items:baseline;gap:2px;font-family:var(--font-display);
+        font-weight:800;font-size:13px;letter-spacing:.12em;color:var(--navy);margin-bottom:16px;}
+  @media (prefers-color-scheme: dark){.logo{color:#eef2f1}}
+  :root[data-theme="dark"] .logo{color:#eef2f1}
+  .logo b{color:var(--teal)}
+
+  h1{font-family:var(--font-display);font-weight:600;font-size:clamp(26px,5vw,36px);
+     line-height:1.12;letter-spacing:-.01em;margin:0 0 12px;text-wrap:balance;}
+  .lede{font-size:16px;line-height:1.65;color:var(--text-soft);max-width:60ch;margin:0 0 40px;}
+
+  section{margin-top:40px;}
+  .s-eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+             color:var(--teal);margin:0 0 6px;}
+  h2{font-family:var(--font-display);font-weight:600;font-size:22px;margin:0 0 6px;letter-spacing:-.01em;}
+  .s-example{font-size:13.5px;color:var(--muted);margin:0 0 20px;}
+  .s-example b{color:var(--text-soft);font-weight:600;}
+
+  .steps{display:flex;flex-direction:column;gap:0;border:1px solid var(--border);
+         border-radius:14px;overflow:hidden;background:var(--card);}
+  .step{display:flex;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .step:last-child{border-bottom:none;}
+  .step .num{font-family:var(--font-display);font-weight:700;font-size:15px;color:#fff;
+             flex:none;width:28px;height:28px;border-radius:50%;background:var(--teal);
+             display:flex;align-items:center;justify-content:center;}
+  .step .body{padding-top:2px;}
+  .step .body p{margin:0;font-size:14.5px;line-height:1.55;color:var(--text);}
+  .step .body .note{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);}
+  .step .body code{font-family:var(--font-mono);font-size:12.5px;background:var(--teal-soft);
+                   color:var(--teal);padding:1px 6px;border-radius:4px;}
+
+  .callout{display:flex;gap:10px;background:var(--blue-soft);border-radius:12px;padding:14px 16px;margin-top:16px;}
+  .callout p{margin:0;font-size:13.5px;line-height:1.6;color:var(--text-soft);}
+  .callout b{color:var(--text);}
+
+  footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--border);
+         font-size:11.5px;color:var(--muted);text-align:center;}
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <div class="logo">D<b>|</b>EZ</div>
+  <h1>How the Dashboard Actually Works</h1>
+  <p class="lede">
+    Three things that happen every time you use the dashboard — how a number
+    gets calculated, how a filter changes what you see, and what happens when
+    you click directly on a chart. Each one walks through a real example.
+  </p>
+
+  <section>
+    <p class="s-eyebrow">Walkthrough 1</p>
+    <h2>How a Number Gets Calculated</h2>
+    <p class="s-example">Example: the <b>"Invoice Amount"</b> tile at the top of the dashboard</p>
+    <div class="steps">
+      <div class="step">
+        <span class="num">1</span>
+        <div class="body"><p>You open the dashboard in your browser.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div class="body"><p>The page asks one simple question: <i>"what's the total invoice amount?"</i></p></div>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <div class="body"><p>That question is sent to a small piece of backend code written specifically to answer it.</p>
+        <span class="note">this code lives inside Fabric itself, right next to the data</span></div>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <div class="body"><p>That code runs a real calculation directly against your actual invoice records — all 1.3 million of them — and adds them up.</p>
+        <span class="note">the adding-up happens inside the database, not in the browser</span></div>
+      </div>
+      <div class="step">
+        <span class="num">5</span>
+        <div class="body"><p>Only the final answer travels back — one number, not the 1.3 million rows behind it.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">6</span>
+        <div class="body"><p>The page displays it: <code>AED 2.91B</code></p></div>
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>The key point:</b> nothing is calculated ahead of time and stored. Every single number on the page is worked out fresh, right at the moment you look at it.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="s-eyebrow">Walkthrough 2</p>
+    <h2>How a Filter Changes What You See</h2>
+    <p class="s-example">Example: picking <b>"Year: 2025"</b> from the dropdown</p>
+    <div class="steps">
+      <div class="step">
+        <span class="num">1</span>
+        <div class="body"><p>You open the Year dropdown and pick 2025.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div class="body"><p>The page remembers one thing: <i>"the user only wants to see 2025."</i></p></div>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <div class="body"><p>It re-asks <b>every single question</b> on the page again — but this time, each one adds <i>"...only for 2025"</i> to what it's asking.</p>
+        <span class="note">the KPIs, every chart, and the invoice table all do this at once</span></div>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <div class="body"><p>Each answer comes back recalculated for just 2025, and every number and chart on the page updates together.</p></div>
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>The key point:</b> there's one shared filter for the whole page, not a separate one per chart. Change it once, and everything responds — because they're all re-asking their questions with the same condition attached.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="s-eyebrow">Walkthrough 3</p>
+    <h2>How Clicking a Chart Works</h2>
+    <p class="s-example">Example: clicking the <b>"DSO"</b> bar in Top Customers</p>
+    <div class="steps">
+      <div class="step">
+        <span class="num">1</span>
+        <div class="body"><p>You click directly on a bar in a chart — say, a customer's name.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div class="body"><p>The page treats that exactly the same as if you'd picked it from a dropdown.</p>
+        <span class="note">there's no real difference between a click and a dropdown pick under the hood</span></div>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <div class="body"><p>The shared filter updates, and every chart and number re-asks its question — same as Walkthrough 2.</p></div>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <div class="body"><p>Click that same bar again, and the page checks: <i>"is this already selected?"</i> — if yes, it removes the filter instead of adding it.</p>
+        <span class="note">that's the on/off toggle behavior</span></div>
+      </div>
+    </div>
+    <div class="callout">
+      <p><b>The key point:</b> a chart click isn't a special feature bolted on — it's just a second way of setting the exact same filter that the dropdowns use.</p>
+    </div>
+  </section>
+
+  <footer>AR Invoice Dashboard · Dubai Silicon Oasis</footer>
+</div>
